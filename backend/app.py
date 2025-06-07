@@ -83,7 +83,8 @@ if not FERNET_KEY:
     # Consider raising an ImproperlyConfigured error for production.
     fernet = None
 else:
-    fernet = Fernet(FERNET_KEY.encode()) # Key needs to be bytes
+    print(f"DEBUG: Using FERNET_KEY: {FERNET_KEY[:10]}... (length: {len(FERNET_KEY)})")
+    fernet = Fernet(FERNET_KEY) # FERNET_KEY is already a base64-encoded string
 
 # --- Database Models ---
 class User(db.Model):

@@ -27,9 +27,6 @@ services:
     environment:
       DATABASE_URL: postgresql://ace_user:ace_password@db:5432/ace_mail_db
       FLASK_ENV: development # Or production
-      # IMPORTANT: Change this JWT_SECRET_KEY to a strong, random secret for production!
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      FERNET_KEY: ${FERNET_KEY} # Load from environment variable
       # Add other backend environment variables as needed
     volumes:
       - ./backend:/app # Mount backend code for development (hot-reloading)
