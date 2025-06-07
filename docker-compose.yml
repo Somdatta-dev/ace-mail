@@ -1,0 +1,52 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17 # Uses PostgreSQL 17 with pgvector 0.8.0 (latest)
+    container_name: ace_mail_db
+    restart: always
+    environment:
+      POSTGRES_USER: ace_user
+      POSTGRES_PASSWORD: ace_password
+      POSTGRES_DB: ace_mail_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: Script to initialize pgvector extension if not enabled by default
+      # - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    ports:
+      - "5432:5432" # Expose PostgreSQL port to host (for development/debugging if needed)
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ace_mail_backend
+    restart: on-failure
+    ports:
+      - "5001:5000" # Map container port 5000 to host port 5001 (to avoid conflict if backend runs locally)
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://ace_user:ace_password@db:5432/ace_mail_db
+      FLASK_ENV: development # Or production
+      # IMPORTANT: Change this JWT_SECRET_KEY to a strong, random secret for production!
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      FERNET_KEY: ${FERNET_KEY} # Load from environment variable
+      # Add other backend environment variables as needed
+    volumes:
+      - ./backend:/app # Mount backend code for development (hot-reloading)
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ace_mail_frontend
+    restart: on-failure
+    ports:
+      - "3000:3000" # React default port
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src # Mount src for hot-reloading in development
+      - ./frontend/public:/app/public # Mount public for hot-reloading
+
+volumes:
+  postgres_data:

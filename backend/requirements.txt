@@ -1,0 +1,16 @@
+Flask
+Flask-CORS
+psycopg2-binary
+SQLAlchemy
+Flask-SQLAlchemy
+Flask-Migrate
+alembic
+# alembic is a dependency of Flask-Migrate but good to list explicitly for clarity
+gunicorn
+Flask-JWT-Extended
+cryptography
+pgvector
+mail-parser
+beautifulsoup4
+lxml
+openai
