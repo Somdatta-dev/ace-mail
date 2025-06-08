@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiClient } from '../../services/api';
-import { cn, formatEmailDate, truncateText, getInitials } from '../../lib/utils';
+import { cn, formatEmailDate, formatEmailDateDetailed, truncateText, getInitials } from '../../lib/utils';
 import { Icons } from '../../components/ui/Icons';
 import { Button } from '../../components/ui/Button';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -1068,13 +1068,43 @@ const renderEmailContent = (email: EmailData) => {
   const shouldForceLeftAlign = email.should_force_left_align !== false; // Default to true
   const cleanedHtml = email.cleaned_html;
 
-  // For designed emails (newsletters, marketing), preserve original layout
+  // For designed emails (newsletters, marketing), preserve original layout but with proper scaling
   if (shouldPreserveLayout && (emailType === 'newsletter' || emailType === 'designed' || emailType === 'rich_html')) {
     return (
-      <div className="text-gray-800 dark:text-gray-200 leading-relaxed prose prose-gray dark:prose-invert max-w-none">
-        <div
+      <div className="max-w-4xl mx-auto">
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .designed-email-content {
+              max-width: 100%;
+              overflow-x: auto;
+            }
+            .designed-email-content * {
+              max-width: 100%;
+              box-sizing: border-box;
+            }
+            .designed-email-content table {
+              max-width: 100% !important;
+              width: auto !important;
+            }
+            .designed-email-content img {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+          `
+        }} />
+        <div 
+          className="designed-email-content text-gray-800 dark:text-gray-200 leading-relaxed"
+          style={{ fontSize: '14px', lineHeight: '1.6' }}
           dangerouslySetInnerHTML={{
-            __html: email.body_html || email.body_full || 'This email has no content to display.'
+            __html: (email.body_html || email.body_full || 'This email has no content to display.')
+              // Fix large font sizes for better readability
+              .replace(/font-size:\s*(\d+)px/gi, (match, size) => {
+                const newSize = Math.min(parseInt(size), 16);
+                return `font-size: ${newSize}px`;
+              })
+              // Remove fixed widths that might cause issues
+              .replace(/width:\s*\d+px/gi, 'width: auto')
+              .replace(/min-width:\s*\d+px/gi, 'min-width: auto')
           }}
         />
       </div>
@@ -1087,19 +1117,63 @@ const renderEmailContent = (email: EmailData) => {
     
     if (cleanedHtml || email.body_html) {
       return (
-        <div className="text-gray-800 dark:text-gray-200 leading-relaxed text-left max-w-4xl">
+        <div className="max-w-4xl mx-auto">
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              .simple-email-content * {
+                text-align: left !important;
+                max-width: 100%;
+                box-sizing: border-box;
+              }
+              .simple-email-content table {
+                max-width: 100% !important;
+                width: auto !important;
+              }
+              .simple-email-content img {
+                max-width: 100% !important;
+                height: auto !important;
+              }
+              .simple-email-content center {
+                text-align: left !important;
+              }
+              .simple-email-content [align="center"],
+              .simple-email-content [align="right"] {
+                text-align: left !important;
+              }
+            `
+          }} />
           <div 
-            className="whitespace-pre-wrap text-left [&_*]:!text-left"
+            className="simple-email-content text-gray-800 dark:text-gray-200 leading-relaxed"
+            style={{ 
+              textAlign: 'left', 
+              fontSize: '14px', 
+              lineHeight: '1.6' 
+            }}
             dangerouslySetInnerHTML={{ 
               __html: contentToUse
+                .replace(/text-align:\s*(center|right)/gi, 'text-align: left')
+                .replace(/align=["'](center|right)["']/gi, 'align="left"')
+                .replace(/<center>/gi, '<div style="text-align: left;">')
+                .replace(/<\/center>/gi, '</div>')
+                .replace(/font-size:\s*(\d+)px/gi, (match, size) => {
+                  const newSize = Math.min(parseInt(size), 16);
+                  return `font-size: ${newSize}px`;
+                })
             }} 
           />
         </div>
       );
     } else {
       return (
-        <div className="text-gray-800 dark:text-gray-200 leading-relaxed text-left max-w-4xl">
-          <div className="whitespace-pre-wrap text-left">
+        <div className="max-w-4xl mx-auto">
+          <div 
+            className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap"
+            style={{ 
+              textAlign: 'left',
+              fontSize: '14px',
+              lineHeight: '1.6'
+            }}
+          >
             {contentToUse || 'This email has no content to display.'}
           </div>
         </div>
@@ -1107,24 +1181,56 @@ const renderEmailContent = (email: EmailData) => {
     }
   }
 
-  // Fallback for unknown types - preserve layout but allow some restrictions
+  // Fallback for unknown types - preserve layout but with proper scaling
   const content = email.body_html || email.body_full || email.body_text || email.body_preview;
   
   if (email.body_html) {
     return (
-      <div className="text-gray-800 dark:text-gray-200 leading-relaxed max-w-4xl">
+      <div className="max-w-4xl mx-auto">
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .fallback-email-content {
+              max-width: 100%;
+              overflow-x: auto;
+            }
+            .fallback-email-content * {
+              max-width: 100%;
+              box-sizing: border-box;
+            }
+            .fallback-email-content table {
+              max-width: 100% !important;
+              width: auto !important;
+            }
+            .fallback-email-content img {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+          `
+        }} />
         <div 
-          className="prose prose-gray dark:prose-invert max-w-none"
+          className="fallback-email-content text-gray-800 dark:text-gray-200 leading-relaxed"
+          style={{ fontSize: '14px', lineHeight: '1.6' }}
           dangerouslySetInnerHTML={{ 
-            __html: content || 'This email has no content to display.'
+            __html: (content || 'This email has no content to display.')
+              .replace(/font-size:\s*(\d+)px/gi, (match, size) => {
+                const newSize = Math.min(parseInt(size), 16);
+                return `font-size: ${newSize}px`;
+              })
           }} 
         />
       </div>
     );
   } else {
     return (
-      <div className="text-gray-800 dark:text-gray-200 leading-relaxed text-left max-w-4xl">
-        <div className="whitespace-pre-wrap">
+      <div className="max-w-4xl mx-auto">
+        <div 
+          className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap"
+          style={{ 
+            textAlign: 'left',
+            fontSize: '14px',
+            lineHeight: '1.6'
+          }}
+        >
           {content || 'This email has no content to display.'}
         </div>
       </div>
@@ -1203,7 +1309,7 @@ const EmailView: React.FC<{
                 <p className="text-sm text-gray-600 dark:text-gray-400">to {email.recipient || 'me'}</p>
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                {formatEmailDate(email.received_date)}
+                {formatEmailDateDetailed(email.received_date)}
               </div>
             </div>
           </div>

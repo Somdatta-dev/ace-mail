@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatEmailDateDetailed } from '../lib/utils';
 
 interface EmailData {
   id: number;
@@ -36,18 +37,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email, onClose }) => {
     );
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+
 
   return (
     <div className="flex-1 bg-white dark:bg-gray-900 flex flex-col">
@@ -86,7 +76,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email, onClose }) => {
             </div>
             
             <div className="text-sm text-gmail-gray-500 dark:text-gray-400">
-              {formatDate(email.received_date)}
+              {formatEmailDateDetailed(email.received_date)}
             </div>
           </div>
         </div>
@@ -94,46 +84,84 @@ const EmailView: React.FC<EmailViewProps> = ({ email, onClose }) => {
 
       {/* Email Body */}
       <div className="flex-1 p-6 overflow-y-auto bg-white dark:bg-gray-900">
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            .email-content * {
-              text-align: left !important;
-              margin-left: 0 !important;
-              margin-right: 0 !important;
-            }
-            .email-content table {
-              text-align: left !important;
-              margin-left: 0 !important;
-              margin-right: 0 !important;
-            }
-            .email-content center {
-              text-align: left !important;
-            }
-            .email-content [align="center"],
-            .email-content [align="right"] {
-              text-align: left !important;
-            }
-          `
-        }} />
-        <div className="prose prose-gray dark:prose-invert max-w-none text-left">
+        <div className="max-w-4xl mx-auto">
           {email.body_html ? (
-            <div 
-              className="email-content text-gmail-gray-800 dark:text-gray-200 leading-relaxed text-left [&>*]:!text-left [&_p]:!text-left [&_div]:!text-left [&_span]:!text-left [&_td]:!text-left [&_th]:!text-left [&_center]:!text-left [&_*]:!text-left [&_table]:!text-left [&_tr]:!text-left [&_h1]:!text-left [&_h2]:!text-left [&_h3]:!text-left [&_h4]:!text-left [&_h5]:!text-left [&_h6]:!text-left [&_li]:!text-left [&_ul]:!text-left [&_ol]:!text-left [&_blockquote]:!text-left [&_a]:text-blue-600 [&_a]:dark:text-blue-400"
-              style={{ 
-                textAlign: 'left' as const,
-                direction: 'ltr' as const
-              }}
-              dangerouslySetInnerHTML={{ 
-                __html: email.body_html
-                  .replace(/text-align:\s*(center|right)/gi, 'text-align: left')
-                  .replace(/align=["'](center|right)["']/gi, 'align="left"')
-                  .replace(/<center>/gi, '<div style="text-align: left;">')
-                  .replace(/<\/center>/gi, '</div>')
-                  .replace(/style=["'][^"']*text-align:\s*(center|right)[^"']*["']/gi, 'style="text-align: left;"')
-              }}
-            />
+            <div className="email-html-content">
+              <style dangerouslySetInnerHTML={{
+                __html: `
+                  .email-html-content {
+                    max-width: 100%;
+                    overflow-x: auto;
+                  }
+                  .email-html-content * {
+                    max-width: 100%;
+                    box-sizing: border-box;
+                  }
+                  .email-html-content table {
+                    max-width: 100% !important;
+                    width: auto !important;
+                    height: auto !important;
+                  }
+                  .email-html-content img {
+                    max-width: 100% !important;
+                    height: auto !important;
+                  }
+                  .email-html-content p, 
+                  .email-html-content div, 
+                  .email-html-content span {
+                    text-align: left !important;
+                  }
+                  .email-html-content center {
+                    text-align: left !important;
+                  }
+                  .email-html-content [align="center"],
+                  .email-html-content [align="right"] {
+                    text-align: left !important;
+                  }
+                  .email-html-content a {
+                    color: #2563eb;
+                    text-decoration: underline;
+                  }
+                  .dark .email-html-content a {
+                    color: #60a5fa;
+                  }
+                `
+              }} />
+              <div 
+                className="text-gray-800 dark:text-gray-200 leading-relaxed"
+                style={{ 
+                  textAlign: 'left',
+                  direction: 'ltr',
+                  fontSize: '14px',
+                  lineHeight: '1.6'
+                }}
+                dangerouslySetInnerHTML={{ 
+                  __html: email.body_html
+                    // Fix text alignment
+                    .replace(/text-align:\s*(center|right)/gi, 'text-align: left')
+                    .replace(/align=["'](center|right)["']/gi, 'align="left"')
+                    .replace(/<center>/gi, '<div style="text-align: left;">')
+                    .replace(/<\/center>/gi, '</div>')
+                    // Fix table and font sizing for better readability
+                    .replace(/font-size:\s*(\d+)px/gi, (match, size) => {
+                      const newSize = Math.min(parseInt(size), 16);
+                      return `font-size: ${newSize}px`;
+                    })
+                    // Remove fixed widths that might cause horizontal scroll
+                    .replace(/width:\s*\d+px/gi, 'width: auto')
+                    .replace(/min-width:\s*\d+px/gi, 'min-width: auto')
+                }}
+              />
+            </div>
           ) : (
-            <div className="whitespace-pre-wrap text-gmail-gray-800 dark:text-gray-200 leading-relaxed text-left" style={{ textAlign: 'left' }}>
+            <div 
+              className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed"
+              style={{ 
+                textAlign: 'left',
+                fontSize: '14px',
+                lineHeight: '1.6'
+              }}
+            >
               {email.body_full || email.body_text || email.body_preview || 'This email has no content to display.'}
             </div>
           )}
