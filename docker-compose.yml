@@ -46,7 +46,7 @@ services:
     container_name: ace_mail_nginx
     restart: always
     ports:
-      - "80:80"   # Main application port
+      - "9247:80"   # Map host port 9247 to container port 80
     depends_on:
       - frontend
       - backend
