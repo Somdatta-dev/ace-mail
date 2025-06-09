@@ -1,27 +1,21 @@
 #!/bin/sh
 
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+echo "Attempting to apply database migrations..."
+# Temporarily disable strict error checking for migrations
+set +e
+flask db upgrade
+migration_result=$?
+set -e
+
+if [ $migration_result -eq 0 ]; then
+    echo "Database migrations applied successfully."
+else
+    echo "Database migrations failed or not needed. Application will continue starting..."
+fi
+
 echo "Starting application..."
-echo "Current directory: $(pwd)"
-echo "Files in current directory:"
-ls -la
-
-echo "Python path:"
-echo $PYTHONPATH
-
-echo "Environment variables:"
-env | grep -E "(FLASK|DATABASE|FERNET|JWT)" || echo "No Flask/DB related env vars found"
-
-echo "Testing Python import..."
-python -c "
-try:
-    import app
-    print('SUCCESS: app.py imported successfully')
-except Exception as e:
-    print(f'ERROR: Failed to import app.py: {e}')
-    import traceback
-    traceback.print_exc()
-"
-
-echo "Starting Flask application..."
 # Execute the command passed as arguments to this script (e.g., flask run or gunicorn)
 exec "$@"

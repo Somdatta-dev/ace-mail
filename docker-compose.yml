@@ -28,8 +28,6 @@ services:
       DATABASE_URL: postgresql://ace_user:ace_password@db:5432/ace_mail_db
       FLASK_ENV: development # Or production
       # Add other backend environment variables as needed
-    volumes:
-      - ./backend:/app # Mount backend code for development (hot-reloading)
 
   frontend:
     build:
@@ -41,9 +39,6 @@ services:
       - "3000:3000" # React default port
     depends_on:
       - backend
-    volumes:
-      - ./frontend/src:/app/src # Mount src for hot-reloading in development
-      - ./frontend/public:/app/public # Mount public for hot-reloading
 
 volumes:
   postgres_data:
