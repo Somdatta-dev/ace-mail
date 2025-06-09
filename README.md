@@ -62,7 +62,7 @@ Internet → Nginx (Reverse Proxy) → Frontend (React) + Backend (Flask API)
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/ace-mail-v2.git
+git clone https://github.com/Somdatta-dev/ace-mail-v2.git
 cd ace-mail-v2
 ```
 
