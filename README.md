@@ -37,6 +37,21 @@ A modern, professional email client built with React, TypeScript, Python Flask, 
 - **HTTPS support** - Secure communication
 - **Local data storage** - Your data stays with you
 
+## 🏗️ Architecture
+
+Ace Mail v2 uses a **reverse proxy architecture** for production deployment:
+
+```
+Internet → Nginx (Reverse Proxy) → Frontend (React) + Backend (Flask API)
+                                → Database (PostgreSQL)
+```
+
+**Key Components:**
+- **Nginx**: Main entry point, routes `/api/*` to backend, everything else to frontend
+- **Frontend**: React TypeScript application (served by nginx)
+- **Backend**: Flask API with PostgreSQL database
+- **Database**: PostgreSQL with pgvector extension
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -52,44 +67,48 @@ cd ace-mail-v2
 ```
 
 ### 2. Setup Environment Variables
-Create a `.env` file in the root directory:
+Create a `.env.local` file in the root directory:
 
 ```env
-# Database
-DATABASE_URL=postgresql://acemail_user:secure_password@db:5432/acemail_db
-POSTGRES_USER=acemail_user
-POSTGRES_PASSWORD=secure_password
-POSTGRES_DB=acemail_db
+# Database Configuration
+DATABASE_URL=postgresql://ace_user:ace_password@db:5432/ace_mail_db
+POSTGRES_USER=ace_user
+POSTGRES_PASSWORD=ace_password
+POSTGRES_DB=ace_mail_db
 
-# Security
-JWT_SECRET_KEY=your-super-secret-jwt-key-change-me-in-production
-FERNET_KEY=your-32-byte-base64-encoded-fernet-key
+# Security Keys
+JWT_SECRET_KEY=ac000a815d43044ba18cf2efe0e7c3d0d7ced61feb2e5ae8a6426aba3c7c6336
+FERNET_KEY=5845VP4K1x_SRgKUjDT4j6zbQPTg0D6AofQGwNV38Ss=
 
-# Email Settings (Optional - can be configured per user)
-DEFAULT_IMAP_HOST=imap.gmail.com
-DEFAULT_SMTP_HOST=smtp.gmail.com
+# Flask Configuration
+FLASK_APP=app.py
+FLASK_ENV=development
 ```
 
-### 3. Generate Fernet Key
+### 3. Generate Your Own Security Keys
 ```bash
+# Generate JWT Secret (recommended)
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# Generate Fernet Key (required)
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
-Copy the output to your `.env` file as `FERNET_KEY`.
+Replace the keys in your `.env.local` file with the generated values.
 
-### 4. Start with Docker
+### 4. Start with Docker (Local Development)
 ```bash
 docker-compose up -d
 ```
 
 ### 5. Access the Application
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5001
-- **Database**: localhost:5432
+- **Main Application**: http://localhost:9247 (via nginx)
+- **Direct Frontend**: http://localhost:3000 (development)
+- **Direct Backend API**: http://localhost:5001 (development)
 
 ## 📱 Usage
 
 ### First Time Setup
-1. **Visit** http://localhost:3000
+1. **Visit** http://localhost:9247
 2. **Login** with your email provider credentials
 3. **Select provider** (Gmail, Outlook, Zoho, or Custom)
 4. **Sync emails** using the sync button
@@ -124,7 +143,7 @@ npm install
 
 # Start development servers
 cd ..
-docker-compose -f docker-compose.dev.yml up
+docker-compose up
 ```
 
 ### Project Structure
@@ -133,6 +152,7 @@ ace-mail-v2/
 ├── backend/                 # Python Flask API
 │   ├── app.py              # Main application
 │   ├── requirements.txt    # Python dependencies
+│   ├── Dockerfile          # Backend container
 │   └── migrations/         # Database migrations
 ├── frontend/               # React TypeScript app
 │   ├── src/
@@ -140,8 +160,12 @@ ace-mail-v2/
 │   │   ├── pages/         # Page components
 │   │   ├── services/      # API services
 │   │   └── lib/           # Utilities
+│   ├── Dockerfile          # Frontend container
 │   └── package.json       # Node dependencies
-├── docker-compose.yml     # Production setup
+├── nginx.conf              # Nginx reverse proxy config
+├── nginx.Dockerfile        # Nginx container
+├── docker-compose.yml      # Production setup
+├── .env.local             # Environment variables
 └── README.md
 ```
 
@@ -155,98 +179,227 @@ ace-mail-v2/
 - `GET /api/emails/search` - Search emails
 - `GET /api/folders` - Get IMAP folders
 
-## 🚀 Deployment
+## 🚀 Production Deployment
 
-### Docker Production Deployment
+### 🐳 Docker Compose Deployment
+
+For basic production deployment:
+
 ```bash
-# Build and start
+# Clone repository
+git clone https://github.com/yourusername/ace-mail-v2.git
+cd ace-mail-v2
+
+# Create production environment file
+cp .env.local .env
+
+# Update environment variables for production
+nano .env
+
+# Deploy
 docker-compose up -d --build
 
-# View logs
+# Check logs
 docker-compose logs -f
-
-# Stop services
-docker-compose down
 ```
 
-### Environment Variables for Production
+**Access your application at**: `http://your-server:9247`
+
+### ☁️ Coolify Deployment (Recommended)
+
+Coolify provides automated deployments with SSL, domain management, and monitoring.
+
+#### **Step 1: Prepare Your Repository**
+
+1. **Push your code** to GitHub/GitLab
+2. **Ensure your `.env.local`** file has production values:
+
 ```env
-# Set strong passwords
-POSTGRES_PASSWORD=your-strong-database-password
-JWT_SECRET_KEY=your-256-bit-secret-key
-FERNET_KEY=your-fernet-encryption-key
+# Strong production passwords
+DATABASE_URL=postgresql://ace_user:STRONG_PASSWORD_HERE@db:5432/ace_mail_db
+POSTGRES_PASSWORD=STRONG_PASSWORD_HERE
+JWT_SECRET_KEY=YOUR_GENERATED_JWT_SECRET_HERE
+FERNET_KEY=YOUR_GENERATED_FERNET_KEY_HERE
 
-# Database URL
-DATABASE_URL=postgresql://acemail_user:your-strong-password@db:5432/acemail_db
+# Flask settings
+FLASK_APP=app.py
+FLASK_ENV=production
 ```
 
-### Cloud Deployment (AWS/Digital Ocean/etc.)
-1. **Push to GitHub**
-2. **Clone on server**
-3. **Set environment variables**
-4. **Run docker-compose up -d**
-5. **Configure reverse proxy** (Nginx/Apache)
-6. **Setup SSL certificates** (Let's Encrypt)
+#### **Step 2: Create Application in Coolify**
 
-## 🔧 Configuration
+1. **Go to Coolify Dashboard** → Projects → Your Project
+2. **Click "New Resource"** → Application
+3. **Select "Docker Compose"** as build pack
+4. **Connect your Git repository**
+5. **Set the following configuration**:
+   - **Name**: `ace-mail-app`
+   - **Build Pack**: `Docker Compose`
+   - **Docker Compose Location**: `/docker-compose.yml`
+   - **Base Directory**: `/` (root)
 
-### Email Provider Settings
-The application auto-configures common providers, but you can customize:
+#### **Step 3: Configure Domains**
 
-```python
-# Custom IMAP/SMTP settings
-CUSTOM_IMAP_HOST=mail.yourcompany.com
-CUSTOM_IMAP_PORT=993
-CUSTOM_SMTP_HOST=mail.yourcompany.com
-CUSTOM_SMTP_PORT=587
-```
+**🚨 CRITICAL: Use Nginx as Your Main Entry Point**
 
-### Feature Toggles
+In Coolify, you should configure domains as follows:
+
+1. **Nginx Service**: 
+   - Domain: `https://acemail.yourdomain.com` (your main app URL)
+   - Port: `9247`
+   - This is your **primary application domain**
+
+2. **Frontend Service**: 
+   - **No domain needed** (accessed through nginx)
+   - Or use for development: `https://acemail-frontend.yourdomain.com`
+
+3. **Backend Service**: 
+   - **No domain needed** (accessed through nginx)
+   - Or use for API testing: `https://acemail-api.yourdomain.com`
+
+#### **Step 4: Configure Environment Variables**
+
+In Coolify → Your Application → Environment Variables:
+
 ```env
-# Auto-sync interval (milliseconds)
-AUTO_SYNC_INTERVAL=30000
-
-# Email fetch limit
-EMAIL_FETCH_LIMIT=100
-
-# Attachment size limit (bytes)
-MAX_ATTACHMENT_SIZE=25000000
+DATABASE_URL=postgresql://ace_user:your_strong_password@db:5432/ace_mail_db
+POSTGRES_USER=ace_user
+POSTGRES_PASSWORD=your_strong_password
+POSTGRES_DB=ace_mail_db
+JWT_SECRET_KEY=your_generated_jwt_secret
+FERNET_KEY=your_generated_fernet_key
+FLASK_APP=app.py
+FLASK_ENV=production
 ```
 
-## 🐛 Troubleshooting
+#### **Step 5: Deploy**
 
-### Common Issues
+1. **Click "Deploy"** in Coolify
+2. **Monitor the build process** in the Logs tab
+3. **Wait for all services to start**:
+   - ✅ Database (PostgreSQL)
+   - ✅ Backend (Flask API)
+   - ✅ Frontend (React App)
+   - ✅ Nginx (Reverse Proxy)
 
-**1. Cannot connect to email provider**
-- Check your email credentials
-- For Gmail, use App Passwords
-- Verify IMAP/SMTP settings
+#### **Step 6: Access Your Application**
 
-**2. Database connection failed**
-- Ensure PostgreSQL is running
-- Check DATABASE_URL in .env
-- Verify database credentials
+Visit your nginx domain: `https://acemail.yourdomain.com`
 
-**3. Frontend won't load**
-- Check if backend is running on port 5001
-- Verify CORS settings
-- Check browser console for errors
+**How it works:**
+```
+https://acemail.yourdomain.com/          → Nginx → React Frontend
+https://acemail.yourdomain.com/api/*     → Nginx → Flask Backend
+```
 
-**4. Emails not syncing**
-- Check email provider settings
-- Verify IMAP connection
-- Look at backend logs for errors
+### 🔧 Advanced Coolify Configuration
 
-### Logs
+#### **Custom Start Command**
+
+If needed, you can set a custom start command in Coolify:
 ```bash
-# View all logs
+docker compose up -d
+```
+
+#### **Health Checks**
+
+Configure health checks for each service:
+- **Backend**: `http://backend:5000/`
+- **Frontend**: `http://frontend:3000/`
+- **Nginx**: `http://nginx:80/health`
+
+#### **Resource Limits**
+
+Set appropriate resource limits in Coolify:
+```yaml
+# Example resource allocation
+Database: 1GB RAM, 0.5 CPU
+Backend: 512MB RAM, 0.3 CPU
+Frontend: 256MB RAM, 0.2 CPU
+Nginx: 128MB RAM, 0.1 CPU
+```
+
+### 🐛 Troubleshooting Deployment
+
+#### **Common Issues**
+
+**1. Port Conflicts**
+```
+Error: Bind for 0.0.0.0:80 failed: port is already allocated
+```
+**Solution**: The nginx service uses port 9247 to avoid conflicts.
+
+**2. API Connection Failed**
+```
+Login failed. Please check your credentials and server settings.
+```
+**Solution**: Ensure you're using the **nginx domain** as your main URL, not the frontend domain directly.
+
+**3. Database Connection Failed**
+```
+FATAL: database "ace_mail_db" does not exist
+```
+**Solution**: Check environment variables and ensure DATABASE_URL is correct.
+
+**4. Nginx Configuration Issues**
+```
+nginx: [emerg] host not found in upstream "backend"
+```
+**Solution**: Ensure all services are in the same Docker network and use service names.
+
+#### **Debug Commands**
+
+```bash
+# View all service logs
 docker-compose logs
 
 # View specific service logs
+docker-compose logs nginx
 docker-compose logs backend
 docker-compose logs frontend
 docker-compose logs db
+
+# Check service status
+docker-compose ps
+
+# Restart specific service
+docker-compose restart nginx
+
+# Check nginx configuration
+docker-compose exec nginx nginx -t
 ```
+
+#### **Coolify Specific Debugging**
+
+1. **Check Application Logs** in Coolify Dashboard
+2. **Verify Domain Configuration** - ensure nginx has the main domain
+3. **Check Resource Usage** - ensure sufficient memory/CPU
+4. **Review Environment Variables** - verify all required variables are set
+5. **Test Each Service** individually using their direct domains (if configured)
+
+### 🔒 Security Considerations
+
+#### **Production Environment Variables**
+- **Never commit** `.env` files to version control
+- **Use strong passwords** for database and JWT secrets
+- **Rotate secrets** regularly
+- **Use HTTPS** in production (Coolify handles this automatically)
+
+#### **Firewall Configuration**
+If deploying on your own server:
+```bash
+# Allow only necessary ports
+ufw allow 22    # SSH
+ufw allow 80    # HTTP (redirects to HTTPS)
+ufw allow 443   # HTTPS
+ufw allow 9247  # Application port (if not behind reverse proxy)
+```
+
+#### **SSL/TLS**
+Coolify automatically provides SSL certificates via Let's Encrypt. For manual deployments, consider:
+- **Certbot** for Let's Encrypt certificates
+- **Cloudflare** for additional security and caching
+- **Load balancer** with SSL termination
 
 ## 🤝 Contributing
 
@@ -272,9 +425,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Flask** and **Python** for the backend
 - **PostgreSQL** for data storage
 - **Docker** for containerization
+- **Nginx** for reverse proxy
 - **Tailwind CSS** for styling
 - **Framer Motion** for animations
-
 
 ---
 
