@@ -1,4 +1,9 @@
-const API_BASE_URL = 'http://localhost:5001/api'; // Backend runs on port 5001 in Docker
+// Use environment-based API URL configuration
+// In production, use relative path (served by reverse proxy/same domain)
+// In local development, use localhost with mapped port
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5001/api'  // Local development
+  : '/api';                      // Production (relative path through reverse proxy)
 
 interface RequestOptions extends RequestInit {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
